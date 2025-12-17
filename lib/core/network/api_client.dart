@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ApiClient {
-  static const String baseUrl = 'https://vamp-asses.onrender.com';
+  static const String baseUrl = 'https://vamp-asses-backend.onrender.com';
   final http.Client client;
 
   ApiClient({http.Client? client}) : client = client ?? http.Client();
