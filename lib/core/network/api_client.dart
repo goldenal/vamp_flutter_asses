@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ApiClient {
   static const String baseUrl = 'https://vamp-asses-backend.onrender.com';
@@ -38,7 +37,3 @@ class ApiClient {
     }
   }
 }
-
-final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient();
-});

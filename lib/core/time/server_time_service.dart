@@ -1,5 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 class ServerTimeService {
   Duration _offset = Duration.zero;
 
@@ -12,7 +10,3 @@ class ServerTimeService {
     return DateTime.now().toUtc().add(_offset);
   }
 }
-
-final serverTimeServiceProvider = Provider<ServerTimeService>((ref) {
-  return ServerTimeService();
-});

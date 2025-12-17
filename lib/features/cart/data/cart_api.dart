@@ -1,6 +1,5 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/api_client.dart';
 import '../domain/cart_item.dart';
+import '../../../core/network/api_client.dart';
 
 class CartApi {
   final ApiClient _client;
@@ -15,13 +14,8 @@ class CartApi {
   Future<CartItem> reserveItem(String userId, String productId) async {
     final response = await _client.post('/cart/reserve', {
       'userId': userId,
-      'productId': productId, // API expects productId
+      'productId': productId,
     });
     return CartItem.fromJson(response);
   }
 }
-
-final cartApiProvider = Provider<CartApi>((ref) {
-  final client = ref.watch(apiClientProvider);
-  return CartApi(client);
-});
