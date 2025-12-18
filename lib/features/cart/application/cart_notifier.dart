@@ -4,6 +4,7 @@ import '../../../core/time/server_time_service.dart';
 import '../data/cart_api.dart';
 import '../domain/cart_item.dart';
 import '../../../core/storage/local_storage_service.dart';
+import '../../../core/network/network_monitor.dart';
 
 sealed class CartState {}
 
@@ -24,6 +25,7 @@ class CartNotifier extends ChangeNotifier {
   final ServerTimeService _timeService;
   final Stream<DateTime> _tickerStream;
   final LocalStorageService _localStorage;
+  final NetworkMonitor _networkMonitor;
   StreamSubscription<DateTime>? _tickerSubscription;
 
   CartState _state = CartLoading();
@@ -34,6 +36,7 @@ class CartNotifier extends ChangeNotifier {
     this._timeService,
     this._tickerStream,
     this._localStorage,
+    this._networkMonitor,
   ) {
     _init();
   }
@@ -81,6 +84,10 @@ class CartNotifier extends ChangeNotifier {
   }
 
   Future<void> reserve(String productId) async {
+    if (!_networkMonitor.isOnline) {
+      throw Exception('No Internet Connection');
+    }
+
     try {
       final item = await _api.reserveItem('user_123', productId);
 
@@ -92,8 +99,9 @@ class CartNotifier extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      // For simplicity, we just keep the current state or could show a transient error
+      // Re-throw to let UI handle the error (e.g. show SnackBar)
       debugPrint('Error reserving item: $e');
+      rethrow;
     }
   }
 

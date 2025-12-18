@@ -87,8 +87,12 @@ class _ProductListItemState extends State<ProductListItem> {
                     }
                   } catch (e) {
                     if (mounted) {
+                      final message = e.toString().replaceAll(
+                        'Exception: ',
+                        '',
+                      );
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to reserve: $e')),
+                        SnackBar(content: Text('Failed to reserve: $message')),
                       );
                     }
                   } finally {

@@ -9,7 +9,9 @@ import 'features/cart/data/cart_api.dart';
 import 'features/cart/application/cart_notifier.dart';
 import 'features/products/presentation/products_screen.dart';
 import 'features/cart/presentation/cart_screen.dart';
+import 'dart:async';
 import 'core/storage/local_storage_service.dart';
+import 'core/network/network_monitor.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +24,7 @@ void main() async {
   final tickerStream = ticker.tick();
 
   final localStorage = await LocalStorageService.init();
+  final networkMonitor = NetworkMonitor();
 
   runApp(
     MultiProvider(
@@ -32,6 +35,7 @@ void main() async {
         Provider.value(value: productsApi),
         Provider.value(value: cartApi),
         Provider.value(value: localStorage),
+        Provider.value(value: networkMonitor),
         StreamProvider<DateTime>.value(
           value: tickerStream,
           initialData: timeService.now(),
@@ -46,6 +50,7 @@ void main() async {
                 timeService,
                 tickerStream,
                 localStorage,
+                networkMonitor,
               ),
         ),
       ],
@@ -61,27 +66,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      // Refresh cart on resume to get fresh server time and reservations
-      context.read<CartNotifier>().refresh();
-    }
-  }
-
+class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -91,8 +76,80 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
+      builder: (context, child) {
+        return NetworkStatusListener(child: child!);
+      },
       home: const ProductsScreen(),
       routes: {'/cart': (context) => const CartScreen()},
     );
+  }
+}
+
+class NetworkStatusListener extends StatefulWidget {
+  final Widget child;
+
+  const NetworkStatusListener({super.key, required this.child});
+
+  @override
+  State<NetworkStatusListener> createState() => _NetworkStatusListenerState();
+}
+
+class _NetworkStatusListenerState extends State<NetworkStatusListener> {
+  StreamSubscription<bool>? _networkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    final networkMonitor = context.read<NetworkMonitor>();
+    _networkSubscription = networkMonitor.onConnectivityChanged
+        .distinct()
+        .listen((isOnline) {
+          if (!mounted) return;
+
+          // Clear any existing snackbars first
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+          if (isOnline) {
+            _refreshData();
+          } else {
+            _showOfflineSnackBar();
+          }
+        });
+  }
+
+  @override
+  void dispose() {
+    _networkSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _showOfflineSnackBar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No Internet Connection'),
+        backgroundColor: Colors.red,
+        duration: Duration(days: 365),
+        behavior: SnackBarBehavior.fixed,
+      ),
+    );
+  }
+
+  Future<void> _refreshData() async {
+    // Re-fetch products and cart
+    context.read<ProductsNotifier>().fetchProducts();
+    context.read<CartNotifier>().refresh();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Back online - Refreshing data...'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
